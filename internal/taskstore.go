@@ -22,8 +22,8 @@ type Task struct {
 // safe to call concurrently.
 // sync.Mutex - мьютекс
 
-/* 
-пример из руководства 
+/*
+пример из руководства
 
 type SafeCounter struct {
 	mu sync.Mutex
@@ -32,18 +32,34 @@ type SafeCounter struct {
 
 лок c.mu.Lock()
 инлок c.mu.Unlock()
- */
+*/
 
 type TaskStore struct {
-	sync.Mutex  
+	sync.Mutex
 
 	tasks  map[int]Task
 	nextId int
 }
 
+// какой то аналог python dict values
+func (ts *TaskStore) values() []Task {
+	arr := make([]Task, 0, len(ts.tasks))
+	for _, task := range ts.tasks {
+		arr = append(arr, task)
+	}
+	return arr
+}
+
+// какой то аналог python dict[key] = value
+func (ts *TaskStore) set(task Task) int {
+	ts.tasks[ts.nextId] = task
+	ts.nextId++
+	return task.Id
+}
+
 func New() *TaskStore {
 	ts := &TaskStore{}
-	ts.tasks = make(map[int]Task)  // создание среза
+	ts.tasks = make(map[int]Task) // создание среза
 	ts.nextId = 0
 	return ts
 }
@@ -51,8 +67,8 @@ func New() *TaskStore {
 // CreateTask creates a new task in the store.
 func (ts *TaskStore) CreateTask(text string, tags []string, due time.Time) int {
 	//
-	ts.Lock()  // лок стора
-	defer ts.Unlock() // после выполнения фукции инлок 
+	ts.Lock()         // лок стора
+	defer ts.Unlock() // после выполнения фукции инлок
 
 	task := Task{
 		Id:   ts.nextId,
@@ -108,15 +124,13 @@ func (ts *TaskStore) GetAllTasks() []Task {
 	ts.Lock()
 	defer ts.Unlock()
 
-
-	/* 
-	возвращаю копию массива потому что ?????
-	 */
-	allTasks := make([]Task, 0, len(ts.tasks))  //  длину (0) и вместимость (количество тасков)
-	for _, task := range ts.tasks {
-		allTasks = append(allTasks, task)
-	}
-	return allTasks
+	/*
+		возвращаю копию массива потому что ?????
+	*/
+	// for _, task := range ts.tasks {
+	// 	allTasks = append(allTasks, task)
+	// }
+	return ts.values()
 }
 
 // GetTasksByTag returns all the tasks that have the given tag, in arbitrary
