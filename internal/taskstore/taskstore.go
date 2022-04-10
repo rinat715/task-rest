@@ -8,15 +8,41 @@ package taskstore
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
 
+const JsonDateForm = "2006-01-02"
+
+type JsonDate time.Time
+
+func (t *JsonDate) UnmarshalJSON(b []byte) (err error) {
+	s := strings.Trim(string(b), `"`)
+	nt, err := time.Parse(JsonDateForm, s)
+	if err != nil {
+		*t = JsonDate(time.Time{}) // в дату записывается начальное время
+		return
+	}
+	*t = JsonDate(nt)
+	return
+}
+
+func (t JsonDate) MarshalJSON() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+// String returns the time in the custom format
+func (t JsonDate) String() string {
+	nt := time.Time(t)
+	return fmt.Sprintf("%q", nt.Format(JsonDateForm))
+}
+
 type Task struct {
-	Id   int       `json:"id"`
-	Text string    `json:"text"`
-	Tags []string  `json:"tags"`
-	Due  time.Time `json:"due"`
+	Id   int      `json:"id,omitempty" default:"0"`
+	Text string   `json:"text"`
+	Tags []string `json:"tags"`
+	Due  JsonDate `json:"due"`
 }
 
 // десериализация
@@ -76,7 +102,7 @@ func New() *TaskStore {
 }
 
 // CreateTask creates a new task in the store.
-func (ts *TaskStore) CreateTask(text string, tags []string, due time.Time) int {
+func (ts *TaskStore) CreateTask(text string, tags []string, due JsonDate) int {
 	//
 	ts.Lock()         // лок стора  sync.Mutex
 	defer ts.Unlock() // после выполнения фукции инлок
@@ -173,7 +199,8 @@ func (ts *TaskStore) GetTasksByDueDate(year int, month time.Month, day int) []Ta
 	var tasks []Task
 
 	for _, task := range ts.tasks {
-		y, m, d := task.Due.Date()
+		nt := time.Time(task.Due)
+		y, m, d := nt.Date()
 		if y == year && m == month && d == day {
 			tasks = append(tasks, task)
 		}

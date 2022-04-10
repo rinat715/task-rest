@@ -14,8 +14,6 @@ import (
 	"go_rest/internal/taskstore"
 )
 
-var urls  
-
 type RequestTask struct {
 	Text string    `json:"text"`
 	Tags []string  `json:"tags"`
