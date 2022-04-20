@@ -6,54 +6,10 @@
 package taskstore
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
-
-const JsonDateForm = "2006-01-02"
-
-type JsonDate time.Time
-
-func (t *JsonDate) UnmarshalJSON(b []byte) (err error) {
-	s := strings.Trim(string(b), `"`)
-	nt, err := time.Parse(JsonDateForm, s)
-	if err != nil {
-		*t = JsonDate(time.Time{}) // в дату записывается начальное время
-		return
-	}
-	*t = JsonDate(nt)
-	return
-}
-
-func (t JsonDate) MarshalJSON() ([]byte, error) {
-	return []byte(t.String()), nil
-}
-
-// String returns the time in the custom format
-func (t JsonDate) String() string {
-	nt := time.Time(t)
-	return fmt.Sprintf("%q", nt.Format(JsonDateForm))
-}
-
-type Task struct {
-	Id   int      `json:"id,omitempty" default:"0"`
-	Text string   `json:"text"`
-	Tags []string `json:"tags"`
-	Due  JsonDate `json:"due"`
-}
-
-// десериализация
-func (c Task) Serialize(data []byte) ([]Task, error) {
-	tasks := []Task{}
-	err := json.Unmarshal(data, &tasks)
-	if err != nil {
-		return nil, err
-	}
-	return tasks, nil
-}
 
 // TaskStore is a simple in-memory database of tasks; TaskStore methods are
 // safe to call concurrently.
@@ -79,8 +35,8 @@ type TaskStore struct {
 }
 
 // какой то аналог python dict values
-func (ts *TaskStore) values() []Task {
-	arr := make([]Task, 0, len(ts.tasks))
+func (ts *TaskStore) values() Tasks {
+	arr := make(Tasks, 0, len(ts.tasks))
 	for _, task := range ts.tasks {
 		arr = append(arr, task)
 	}
@@ -102,7 +58,7 @@ func New() *TaskStore {
 }
 
 // CreateTask creates a new task in the store.
-func (ts *TaskStore) CreateTask(text string, tags []string, due JsonDate) int {
+func (ts *TaskStore) CreateTask(text string, tags []string, date JsonDate, done bool) int {
 	//
 	ts.Lock()         // лок стора  sync.Mutex
 	defer ts.Unlock() // после выполнения фукции инлок
@@ -110,7 +66,9 @@ func (ts *TaskStore) CreateTask(text string, tags []string, due JsonDate) int {
 	task := Task{
 		Id:   ts.nextId,
 		Text: text,
-		Due:  due}
+		Date: date,
+		Done: done,
+	}
 	task.Tags = make([]string, len(tags)) // срез длиной количество тегов
 	copy(task.Tags, tags)
 
@@ -157,26 +115,18 @@ func (ts *TaskStore) DeleteAllTasks() error {
 }
 
 // GetAllTasks returns all the tasks in the store, in arbitrary order.
-func (ts *TaskStore) GetAllTasks() []Task {
+func (ts *TaskStore) GetAllTasks() Tasks {
 	ts.Lock()
 	defer ts.Unlock()
-
-	/*
-		возвращаю копию массива потому что ?????
-	*/
-	// for _, task := range ts.tasks {
-	// 	allTasks = append(allTasks, task)
-	// }
 	return ts.values()
 }
 
 // GetTasksByTag returns all the tasks that have the given tag, in arbitrary
 // order.
-func (ts *TaskStore) GetTasksByTag(tag string) []Task {
+func (ts *TaskStore) GetTasksByTag(tag string) Tasks {
 	ts.Lock()
 	defer ts.Unlock()
-
-	var tasks []Task
+	var tasks Tasks
 
 taskloop:
 	for _, task := range ts.tasks {
@@ -192,14 +142,14 @@ taskloop:
 
 // GetTasksByDueDate returns all the tasks that have the given due date, in
 // arbitrary order.
-func (ts *TaskStore) GetTasksByDueDate(year int, month time.Month, day int) []Task {
+func (ts *TaskStore) GetTasksByDueDate(year int, month time.Month, day int) Tasks {
 	ts.Lock()
 	defer ts.Unlock()
 
-	var tasks []Task
+	var tasks Tasks
 
 	for _, task := range ts.tasks {
-		nt := time.Time(task.Due)
+		nt := time.Time(task.Date)
 		y, m, d := nt.Date()
 		if y == year && m == month && d == day {
 			tasks = append(tasks, task)

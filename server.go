@@ -21,8 +21,8 @@ type RequestTask struct {
 }
 
 // рендрер json responce
-func renderJsonResponse(w http.ResponseWriter, data interface{}) {
-	js, err := json.Marshal(data)
+func renderJsonResponse(w http.ResponseWriter, v taskstore.Serializer) {
+	js, err := v.Serialize()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -132,7 +132,7 @@ func (ts *taskServer) getAllTasksHandler(w http.ResponseWriter, req *http.Reques
 	log.Printf("handling get all tasks at %s\n", req.URL.Path)
 
 	response := ts.store.GetAllTasks()
-	renderJsonResponse(w, response)
+	renderJsonResponse(w, &response)
 }
 
 func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
@@ -143,7 +143,7 @@ func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request, i
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	renderJsonResponse(w, task)
+	renderJsonResponse(w, &task)
 }
 
 func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
@@ -177,7 +177,7 @@ func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
 	tag := pathParts[1]
 
 	tasks := ts.store.GetTasksByTag(tag)
-	renderJsonResponse(w, tasks)
+	renderJsonResponse(w, &tasks)
 }
 
 func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
@@ -216,7 +216,7 @@ func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tasks := ts.store.GetTasksByDueDate(year, time.Month(month), day)
-	renderJsonResponse(w, tasks)
+	renderJsonResponse(w, &tasks)
 }
 
 func main() {
