@@ -26,7 +26,7 @@ func JsonResponse(w http.ResponseWriter, v taskstore.Serializer) {
 	w.Write(js)
 }
 
-func validateJsonRequestType(w http.ResponseWriter, req *http.Request) {
+func validateRequestType(w http.ResponseWriter, req *http.Request, request_type string) {
 	// Enforce a JSON Content-Type.
 	contentType := req.Header.Get("Content-Type")
 	mediatype, _, err := mime.ParseMediaType(contentType)
@@ -34,20 +34,19 @@ func validateJsonRequestType(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if mediatype != "application/json" {
-		http.Error(w, "expect application/json Content-Type", http.StatusUnsupportedMediaType)
+	if mediatype != request_type {
+		http.Error(w, fmt.Sprint("expect %s Content-Type", request_type), http.StatusUnsupportedMediaType)
 		return
 	}
 }
 
-func parseJsonRequest(req *http.Request) (taskstore.Task, error) {
+func parseJsonRequest(req *http.Request, v interface{}) error {
 	dec := json.NewDecoder(req.Body)
 	dec.DisallowUnknownFields()
-	var rt taskstore.Task
-	if err := dec.Decode(&rt); err != nil {
-		return rt, err
+	if err := dec.Decode(v); err != nil {
+		return err
 	}
-	return rt, nil
+	return nil
 }
 
 // как бы класс только структура которая создает экземпляр сервера
@@ -106,22 +105,20 @@ func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request
 
 	// Types used internally in this handler to (de-)serialize the request and
 	// response from/to JSON.
+	validateRequestType(w, req, "application/json")
 
-	validateJsonRequestType(w, req)
-
-	rt, err := parseJsonRequest(req)
+	var r taskstore.Task
+	err := parseJsonRequest(req, &r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	task := ts.store.Create(rt.Text, rt.Tags, rt.Date, rt.Done)
+	task := ts.store.Create(r.Text, r.Tags, r.Date, r.Done)
 	JsonResponse(w, &task)
-
 }
 
 func (ts *taskServer) getAllTasksHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handling get all tasks at %s\n", req.URL.Path)
-
 	tasks := ts.store.GetAll()
 	JsonResponse(w, &tasks)
 }
