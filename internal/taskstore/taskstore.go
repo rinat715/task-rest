@@ -27,6 +27,17 @@ type SafeCounter struct {
 инлок c.mu.Unlock()
 */
 
+// все репозитории соответствуют этому интерфейсу
+type Repository interface {
+	Create(text string, tags []string, date JsonDate, done bool) Task
+	Get(id int) (Task, error)
+	Delete(id int) error
+	DeleteAll() error
+	GetByTag(tag string) Tasks
+	GetByDate(year int, month time.Month, day int) Tasks
+	GetAll() Tasks
+}
+
 type TaskStore struct {
 	sync.Mutex
 
@@ -51,14 +62,14 @@ func (ts *TaskStore) set(task Task) int {
 }
 
 func New() *TaskStore {
-	ts := &TaskStore{}
-	ts.tasks = make(map[int]Task) // создание среза
-	ts.nextId = 0
-	return ts
+	return &TaskStore{
+		tasks:  make(map[int]Task),
+		nextId: 0,
+	}
 }
 
 // CreateTask creates a new task in the store.
-func (ts *TaskStore) CreateTask(text string, tags []string, date JsonDate, done bool) int {
+func (ts *TaskStore) Create(text string, tags []string, date JsonDate, done bool) Task {
 	//
 	ts.Lock()         // лок стора  sync.Mutex
 	defer ts.Unlock() // после выполнения фукции инлок
@@ -74,12 +85,12 @@ func (ts *TaskStore) CreateTask(text string, tags []string, date JsonDate, done 
 
 	ts.tasks[ts.nextId] = task
 	ts.nextId++
-	return task.Id
+	return task
 }
 
 // GetTask retrieves a task from the store, by id. If no such id exists, an
 // error is returned.
-func (ts *TaskStore) GetTask(id int) (Task, error) {
+func (ts *TaskStore) Get(id int) (Task, error) {
 	ts.Lock()
 	defer ts.Unlock()
 
@@ -93,7 +104,7 @@ func (ts *TaskStore) GetTask(id int) (Task, error) {
 
 // DeleteTask deletes the task with the given id. If no such id exists, an error
 // is returned.
-func (ts *TaskStore) DeleteTask(id int) error {
+func (ts *TaskStore) Delete(id int) error {
 	ts.Lock()
 	defer ts.Unlock()
 
@@ -106,7 +117,7 @@ func (ts *TaskStore) DeleteTask(id int) error {
 }
 
 // DeleteAllTasks deletes all tasks in the store.
-func (ts *TaskStore) DeleteAllTasks() error {
+func (ts *TaskStore) DeleteAll() error {
 	ts.Lock()
 	defer ts.Unlock()
 
@@ -115,7 +126,7 @@ func (ts *TaskStore) DeleteAllTasks() error {
 }
 
 // GetAllTasks returns all the tasks in the store, in arbitrary order.
-func (ts *TaskStore) GetAllTasks() Tasks {
+func (ts *TaskStore) GetAll() Tasks {
 	ts.Lock()
 	defer ts.Unlock()
 	return ts.values()
@@ -123,7 +134,7 @@ func (ts *TaskStore) GetAllTasks() Tasks {
 
 // GetTasksByTag returns all the tasks that have the given tag, in arbitrary
 // order.
-func (ts *TaskStore) GetTasksByTag(tag string) Tasks {
+func (ts *TaskStore) GetByTag(tag string) Tasks {
 	ts.Lock()
 	defer ts.Unlock()
 	var tasks Tasks
@@ -142,7 +153,7 @@ taskloop:
 
 // GetTasksByDueDate returns all the tasks that have the given due date, in
 // arbitrary order.
-func (ts *TaskStore) GetTasksByDueDate(year int, month time.Month, day int) Tasks {
+func (ts *TaskStore) GetByDate(year int, month time.Month, day int) Tasks {
 	ts.Lock()
 	defer ts.Unlock()
 
