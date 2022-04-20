@@ -14,14 +14,9 @@ import (
 	"go_rest/internal/taskstore"
 )
 
-type RequestTask struct {
-	Text string    `json:"text"`
-	Tags []string  `json:"tags"`
-	Due  time.Time `json:"due"`
-}
-
 // рендрер json responce
-func renderJsonResponse(w http.ResponseWriter, v taskstore.Serializer) {
+// по факту это надо засунуть в миддлеваре
+func JsonResponse(w http.ResponseWriter, v taskstore.Serializer) {
 	js, err := v.Serialize()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,10 +40,10 @@ func validateJsonRequestType(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseJsonRequest(req *http.Request) (RequestTask, error) {
+func parseJsonRequest(req *http.Request) (taskstore.Task, error) {
 	dec := json.NewDecoder(req.Body)
 	dec.DisallowUnknownFields()
-	var rt RequestTask
+	var rt taskstore.Task
 	if err := dec.Decode(&rt); err != nil {
 		return rt, err
 	}
@@ -58,11 +53,11 @@ func parseJsonRequest(req *http.Request) (RequestTask, error) {
 // как бы класс только структура которая создает экземпляр сервера
 // store это экземпляр хранилища тасков
 type taskServer struct {
-	store *taskstore.TaskStore
+	store taskstore.Repository
 }
 
 func NewTaskServer() *taskServer {
-	store := taskstore.New() // создание
+	store := taskstore.New() // создание репозитория основанного на map memory
 	return &taskServer{store: store}
 }
 
@@ -114,42 +109,38 @@ func (ts *taskServer) createTaskHandler(w http.ResponseWriter, req *http.Request
 
 	validateJsonRequestType(w, req)
 
-	type ResponseId struct {
-		Id int `json:"id"`
-	}
 	rt, err := parseJsonRequest(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	id := ts.store.CreateTask(rt.Text, rt.Tags, rt.Due)
-	var response = ResponseId{Id: id}
-	renderJsonResponse(w, response)
+	task := ts.store.Create(rt.Text, rt.Tags, rt.Date, rt.Done)
+	JsonResponse(w, &task)
 
 }
 
 func (ts *taskServer) getAllTasksHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handling get all tasks at %s\n", req.URL.Path)
 
-	response := ts.store.GetAllTasks()
-	renderJsonResponse(w, &response)
+	tasks := ts.store.GetAll()
+	JsonResponse(w, &tasks)
 }
 
 func (ts *taskServer) getTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
 	log.Printf("handling get task at %s\n", req.URL.Path)
 
-	task, err := ts.store.GetTask(id)
+	task, err := ts.store.Get(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	renderJsonResponse(w, &task)
+	JsonResponse(w, &task)
 }
 
 func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request, id int) {
 	log.Printf("handling delete task at %s\n", req.URL.Path)
 
-	err := ts.store.DeleteTask(id)
+	err := ts.store.Delete(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
@@ -157,7 +148,7 @@ func (ts *taskServer) deleteTaskHandler(w http.ResponseWriter, req *http.Request
 
 func (ts *taskServer) deleteAllTasksHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("handling delete all tasks at %s\n", req.URL.Path)
-	ts.store.DeleteAllTasks()
+	ts.store.DeleteAll()
 }
 
 func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
@@ -176,8 +167,8 @@ func (ts *taskServer) tagHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	tag := pathParts[1]
 
-	tasks := ts.store.GetTasksByTag(tag)
-	renderJsonResponse(w, &tasks)
+	tasks := ts.store.GetByTag(tag)
+	JsonResponse(w, &tasks)
 }
 
 func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
@@ -215,8 +206,8 @@ func (ts *taskServer) dueHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks := ts.store.GetTasksByDueDate(year, time.Month(month), day)
-	renderJsonResponse(w, &tasks)
+	tasks := ts.store.GetByDate(year, time.Month(month), day)
+	JsonResponse(w, &tasks)
 }
 
 func main() {
