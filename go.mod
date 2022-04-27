@@ -2,6 +2,7 @@ module go_rest
 
 go 1.18
 
-replace go_rest/internal/taskstore => ./internal/taskstore
-
-require go_rest/internal/taskstore v0.0.0-00010101000000-000000000000
+require (
+	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f // indirect
+	github.com/mattn/go-sqlite3 v1.14.12 // indirect
+)
