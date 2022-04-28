@@ -4,7 +4,7 @@ import (
 	"errors"
 	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
-	s "go_rest/internal/sqlstore"
+	s "go_rest/internal/taskstore/sqlstore"
 	"reflect"
 	"testing"
 )

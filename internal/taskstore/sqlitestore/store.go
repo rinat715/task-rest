@@ -3,7 +3,7 @@ package sqlitestore
 import (
 	"database/sql"
 
-	s "go_rest/internal/sqlstore"
+	s "go_rest/internal/taskstore/sqlstore"
 
 	_ "github.com/mattn/go-sqlite3"
 )
