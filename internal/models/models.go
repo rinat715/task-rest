@@ -128,6 +128,23 @@ func (c *Tasks) Serialize() ([]byte, error) {
 	return marshal(c)
 }
 
+func (c Tasks) GetIds() []int {
+	var ids []int
+	for _, i := range c {
+		ids = append(ids, i.Id)
+	}
+	return ids
+}
+
+func (c Tasks) AddTags(tags map[int][]string) Tasks {
+	var res Tasks
+	for _, task := range c {
+		task.Tags = tags[task.Id]
+		res = append(res, task)
+	}
+	return res
+}
+
 // все репозитории соответствуют этому интерфейсу
 type Repository interface {
 	Create(*Task) error
