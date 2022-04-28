@@ -57,10 +57,10 @@ func parseTagToMap(rows *sql.Rows) (map[int][]string, error) {
 		var taskid int
 		err := rows.Scan(&taskid, &tag)
 		i, ok := tags[taskid]
-		if ok != true {
+		if !ok {
 			tags[taskid] = []string{tag}
 		} else {
-			i = append(i, tag)
+			tags[taskid] = append(i, tag)
 		}
 		if err != nil {
 			return tags, err
