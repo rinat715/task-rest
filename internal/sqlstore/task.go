@@ -105,55 +105,28 @@ func (ts *tasks) DeleteAll() error {
 	return nil
 }
 
-// func (ts *TasksStoreSqlite) GetByTag(tag string) (m.Tasks, error) {
-// 	var tasks m.Tasks
+func (ts *tasks) GetByTag(tag string) (m.Tasks, error) {
+	const query string = `SELECT task.taskid, task.text, task.date, task.done
+						FROM task INNER JOIN tag
+						WHERE task.taskid = tag.taskid
+						AND tag.value = ?`
+	return ts.getTasks(query, tag)
+}
 
-// 	stmt, err := ts.db.Prepare(`SELECT task.taskid, task.text, task.date, task.done
-// 								FROM task INNER JOIN tag
-// 								WHERE tag.value = ?`)
-// 	if err != nil {
-// 		return tasks, err
-// 	}
+func (ts *tasks) GetByDate(date m.JsonDate) (m.Tasks, error) {
+	const query string = `SELECT taskid, text, date, done
+						FROM task
+						WHERE date = ?`
 
-// }
+	return ts.getTasks(query, date)
+}
 
-// func (ts *TasksStoreSqlite) GetByTag(tag string) (m.Tasks, error) {
-// 	var tasks m.Tasks
-// 	stmt, err := ts.db.Prepare(`SELECT task.taskid, task.taskid, task.date, task.done
-// 							FROM task INNER JOIN tag
-// 							WHERE task.taskid = tag.taskid`)
-// 	if err != nil {
-// 		return tasks, err
-// 	}
-
-// 	rows, err := stmt.Query(1)
-// 	if err != nil {
-// 		return tasks, err
-// 	}
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		var task m.Task
-//         if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist,
-//             &alb.Price, &alb.Quantity); err != nil {
-//             return albums, err
-//         }
-//         albums = append(albums, album)
-// 		// ...
-// 	}
-// 	if err = rows.Err(); err != nil {
-// 		return tasks, err
-// 	}
-
-// 	defer stmt.Close()
-// 	return tasks, err
-
-// }
-// func (ts *TasksStoreSqlite) GetByDate(date m.JsonDate) m.Tasks {}
-
-func (ts *tasks) getTasks() (m.Tasks, error) {
+func (ts *tasks) GetAll() (m.Tasks, error) {
 	var err error
 	var tasks m.Tasks
-	stmt, err := ts.db.Prepare("SELECT taskid, text, date, done FROM task")
+	const query string = "SELECT taskid, text, date, done FROM task"
+
+	stmt, err := ts.db.Prepare(query)
 	if err != nil {
 		return tasks, err
 	}
@@ -161,18 +134,11 @@ func (ts *tasks) getTasks() (m.Tasks, error) {
 	if err != nil {
 		return tasks, err
 	}
-
-	defer stmt.Close()
-	return parseTasks(rows)
-}
-
-func (ts *tasks) GetAll() (m.Tasks, error) {
-	var err error
-	var tasks m.Tasks
-	tasks, err = ts.getTasks()
+	tasks, err = parseTasks(rows)
 	if err != nil {
 		return tasks, err
 	}
+
 	tags, err := ts.getTags()
 	if err != nil {
 		return tasks, err
@@ -180,5 +146,35 @@ func (ts *tasks) GetAll() (m.Tasks, error) {
 	for _, task := range tasks {
 		task.Tags = tags[task.Id]
 	}
+
+	defer stmt.Close()
 	return tasks, nil
+}
+
+func (ts *tasks) getTasks(query string, arg ...interface{}) (m.Tasks, error) {
+	var err error
+	var tasks m.Tasks
+
+	stmt, err := ts.db.Prepare(query)
+	if err != nil {
+		return tasks, err
+	}
+	rows, err := stmt.Query(arg...)
+	if err != nil {
+		return tasks, err
+	}
+
+	tasks, err = parseTasks(rows)
+	if err != nil {
+		return tasks, err
+	}
+
+	defer stmt.Close()
+
+	tags, err := ts.getTagsbyTaskids(tasks.GetIds())
+	if err != nil {
+		return tasks, err
+	}
+
+	return tasks.AddTags(tags), nil
 }

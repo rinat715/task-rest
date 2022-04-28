@@ -3,79 +3,137 @@ package sqlitestore
 import (
 	"fmt"
 	m "go_rest/internal/models"
-	s "go_rest/internal/sqlstore"
 	"reflect"
 	"testing"
-	"time"
 )
 
-var task m.Task = m.Task{
-	Text: "Example text",
-	Tags: []string{
-		"test_tag1",
-		"test_tag2",
-	},
-	Date: m.JsonDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-	Done: false,
-}
+func TestDb(t *testing.T) {
+	var err error
+	date1, err := m.JsonDateParse("2009-10-23")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func createDb() (*s.Store, error) {
+	var task m.Task = m.Task{
+		Text: "Example text",
+		Tags: []string{
+			"test_tag1",
+			"test_tag2",
+		},
+		Date: date1,
+		Done: false,
+	}
+
 	ts, err := New(":memory:")
 	if err != nil {
-		return ts, err
+		t.Fatal(err)
 	}
 	ts.CreateTables()
 	if err != nil {
-		return ts, err
+		t.Fatal(err)
 	}
-	return ts, nil
-}
 
-func createTask(t *testing.T, ts *s.Store) m.Task {
-	err := ts.Create(&task)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return task
-}
 
-func TestCreate(t *testing.T) {
-	var err error
-	ts, err := createDb()
-	if err != nil {
-		t.Fatal(err)
-	}
-	task := createTask(t, ts)
-
-	if task.Id != 1 {
-		t.Errorf("Error: got %v, want %v", task.Id, 1)
-	}
-
-	defer ts.Close()
-}
-
-func TestGet(t *testing.T) {
-	var err error
-	ts, err := createDb()
-	if err != nil {
-		t.Fatal(err)
-	}
-	createTask(t, ts)
-
-	taskfromDb, err := ts.Get(1)
+	err = ts.Create(&task)
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(taskfromDb, task) {
-		t.Errorf("Error: got %v", taskfromDb)
+
+	date2, err := m.JsonDateParse("2010-10-23")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	_, err = ts.Get(2)
-	if err == nil {
-		t.Error("Not exception raised")
+	err = ts.Create(&m.Task{
+		Text: "Example text2",
+		Tags: []string{
+			"test_tag2",
+		},
+		Date: date2,
+		Done: false,
+	})
+	if err != nil {
+		t.Error(err)
 	}
-	if fmt.Sprint(err) != "sql: no rows in result set" {
-		t.Errorf("Unknown error message %v", err)
-	}
-	defer ts.Close()
+
+	t.Run("Create task", func(t *testing.T) {
+		if task.Id != 1 {
+			t.Errorf("Error: got %v, want %v", task.Id, 1)
+		}
+	})
+	t.Run("Get task", func(t *testing.T) {
+		taskfromDb, err := ts.Get(1)
+		if err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(taskfromDb, task) {
+			t.Errorf("Error: got %v", taskfromDb)
+		}
+		if task.Text != "Example text" {
+			t.Errorf("Error: got %v, want %v", task.Text, "Example text")
+		}
+
+		_, err = ts.Get(3)
+		if err == nil {
+			t.Error("Not exception raised")
+		}
+		if fmt.Sprint(err) != "sql: no rows in result set" {
+			t.Errorf("Unknown error message %v", err)
+		}
+	})
+	t.Run("Get all task", func(t *testing.T) {
+		res, err := ts.GetAll()
+		if err != nil {
+			t.Error(err)
+		}
+		if len(res) != 2 {
+			t.Errorf("Error: length tasks not equal 2")
+		}
+	})
+	t.Run("Get task by tag", func(t *testing.T) {
+		res, err := ts.GetByTag("test_tag1")
+		if err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(res[0], task) {
+			t.Errorf("Error: got %v", res[0])
+		}
+
+		res, err = ts.GetByTag("test_tag2")
+		if err != nil {
+			t.Error(err)
+		}
+		if len(res) != 2 {
+			t.Errorf("Error: length tasks not equal 2")
+		}
+		_, err = ts.GetByTag("test_tag3")
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("Get task by date", func(t *testing.T) {
+		date, err := m.JsonDateParse("2009-10-23")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		res, err := ts.GetByDate(date)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(res) == 0 {
+			t.Fatal("Not found tasks")
+		}
+		if !reflect.DeepEqual(res[0], task) {
+			t.Errorf("Error: got %v", res[0])
+		}
+	})
+
+	t.Cleanup(func() {
+		ts.Close()
+	})
 }
