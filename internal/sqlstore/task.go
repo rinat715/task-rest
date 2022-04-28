@@ -3,10 +3,29 @@ package sqlstore
 
 import (
 	"database/sql"
+	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
+
+	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type TaskNotFound struct {
+	Id int
+}
+
+func (e *TaskNotFound) Error() string {
+	return fmt.Sprintf("Task id %v not found", e.Id)
+}
+
+func (e *TaskNotFound) Is(target error) bool {
+	t, ok := target.(*TaskNotFound)
+	if !ok {
+		return false
+	}
+	return e.Id == t.Id
+}
 
 type tasks struct {
 	db *sql.DB
@@ -62,6 +81,9 @@ func (ts *tasks) Get(id int) (m.Task, error) {
 	}
 
 	err = stmt.QueryRow(id).Scan(&task.Id, &task.Text, &task.Date, &task.Done)
+	if err == sql.ErrNoRows {
+		return task, e.NewErrorWrapper("sqlstore", &TaskNotFound{Id: id}, "Task not found")
+	}
 	if err != nil {
 		return task, err
 	}

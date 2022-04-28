@@ -1,8 +1,10 @@
 package sqlitestore
 
 import (
-	"fmt"
+	"errors"
+	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
+	s "go_rest/internal/sqlstore"
 	"reflect"
 	"testing"
 )
@@ -78,11 +80,18 @@ func TestDb(t *testing.T) {
 
 		_, err = ts.Get(3)
 		if err == nil {
-			t.Error("Not exception raised")
+			t.Errorf("Error TaskNotFound not raised")
+		} else {
+			var ew e.ErrorWrapper
+			if errors.As(err, &ew) {
+				if !errors.Is(ew.Err, &s.TaskNotFound{Id: 3}) {
+					t.Error(ew.Err)
+				}
+			} else {
+				t.Error(err)
+			}
 		}
-		if fmt.Sprint(err) != "sql: no rows in result set" {
-			t.Errorf("Unknown error message %v", err)
-		}
+
 	})
 	t.Run("Get all task", func(t *testing.T) {
 		res, err := ts.GetAll()
