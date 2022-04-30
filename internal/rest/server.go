@@ -1,17 +1,18 @@
-package main
+package rest
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"mime"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/bmizerany/pat"
+	"github.com/justinas/alice"
 
+	"go_rest/internal/config"
 	"go_rest/internal/models"
+	"go_rest/internal/taskstore/sqlitestore"
 )
 
 // как бы класс только структура которая создает экземпляр сервера
@@ -22,17 +23,25 @@ type taskServer struct {
 }
 
 func NewTaskServer() {
+	var err error
+	ts, err := sqlitestore.New(":memory:")
+	if err != nil {
+		log.Fatal(err)
+	}
 	s := &taskServer{
-		store:  taskstore.New(),
+		store:  ts,
 		router: pat.New(),
 	}
 	s.routers()
-	log.Fatal(http.ListenAndServe("localhost:"+os.Getenv("SERVERPORT"), s.router)) // пробрасываю порт который будет слушаать сервер
+	url := fmt.Sprintf("localhost:%v", config.Config.Port)
+	err = http.ListenAndServe(url, s.router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // utils
 // рендрер json responce
-// по факту это надо засунуть в миддлеваре
 func (s *taskServer) jsonResponse(w http.ResponseWriter, v models.Serializer) error {
 	js, err := v.Serialize()
 	if err != nil {
@@ -54,21 +63,6 @@ func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, 
 	return nil
 }
 
-func (s *taskServer) validateRequestType(w http.ResponseWriter, req *http.Request, request_type string) error {
-	// Enforce a JSON Content-Type.
-	contentType := req.Header.Get("Content-Type")
-	mediatype, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	if mediatype != request_type {
-		http.Error(w, fmt.Sprint("expect %s Content-Type", request_type), http.StatusUnsupportedMediaType)
-		return err
-	}
-	return nil
-}
-
 func (s *taskServer) getIdfromQuery(req *http.Request) int {
 	param := req.URL.Query().Get(":taskid")
 	taskid, err := strconv.Atoi(param)
@@ -80,18 +74,25 @@ func (s *taskServer) getIdfromQuery(req *http.Request) int {
 
 // routes
 func (s *taskServer) routers() {
-	s.router.Get("/tasks", http.HandlerFunc(s.GetTasks))
-	s.router.Get("/tasks/:taskid", http.HandlerFunc(s.GetTaskbyId))
-	s.router.Post("/tasks", http.HandlerFunc(s.PostTask))
-	s.router.Del("/tasks", http.HandlerFunc(s.DelTasks))
-	s.router.Del("/tasks/:taskid", http.HandlerFunc(s.DelTaskbyId))
+	commonHandlers := alice.New(PanicRecovery, Logging, ValidateRequestJsonType)
+	s.router.Get("/tasks", commonHandlers.Then(http.HandlerFunc(s.GetTasks)))
+	s.router.Get("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.GetTaskbyId)))
+	s.router.Post("/tasks", commonHandlers.Then(http.HandlerFunc(s.PostTask)))
+	s.router.Del("/tasks", commonHandlers.Then(http.HandlerFunc(s.DelTasks)))
+	s.router.Del("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.DelTaskbyId)))
+	s.router.Get("/test_panic", commonHandlers.Then(http.HandlerFunc(s.TestPanic)))
 }
 
 // handlers
+func (s *taskServer) TestPanic(w http.ResponseWriter, req *http.Request) {
+	panic("Error: Тестовый роут для проверки паники")
+}
+
 func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
-	var tasks models.Tasks
 	tag := req.URL.Query().Get("tag")
 	date := req.URL.Query().Get("date")
+	var tasks models.Tasks
+	var err error
 
 	if tag != "" && date != "" {
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
@@ -99,18 +100,30 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if tag != "" {
-		tasks = s.store.GetByTag(tag)
+		tasks, err = s.store.GetByTag(tag)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
+			return
+		}
 	}
 
 	if date != "" {
 		t, err := models.JsonDateParse(date)
 		if err != nil {
-			http.Error(w, fmt.Sprint("Date %s invalid", date), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Date %v invalid", date), http.StatusBadRequest)
 			return
 		}
-		tasks = s.store.GetByDate(t)
+		tasks, err = s.store.GetByDate(t)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
+			return
+		}
 	}
-	tasks = s.store.GetAll()
+	tasks, err = s.store.GetAll()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
+		return
+	}
 	s.jsonResponse(w, &tasks)
 }
 
@@ -123,24 +136,16 @@ func (s *taskServer) GetTaskbyId(w http.ResponseWriter, req *http.Request) {
 	}
 	task, err := s.store.Get(taskid)
 	if err != nil {
-		http.Error(w, fmt.Sprint("Task by id %s not found"), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Task by id %v not found", task.Id), http.StatusNotFound)
 	}
 	s.jsonResponse(w, &task)
 
 }
 
 func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
-	log.Printf("handling task create at %s\n", req.URL.Path)
 	var err error
-
-	// Types used internally in this handler to (de-)serialize the request and
-	// response from/to JSON.
-	err = s.validateRequestType(w, req, "application/json")
-	if err != nil {
-		return
-	}
-
 	var task models.Task
+
 	err = s.parseJsonRequest(w, req, &task)
 	if err != nil {
 		return
@@ -161,15 +166,10 @@ func (s *taskServer) DelTaskbyId(w http.ResponseWriter, req *http.Request) {
 
 	err := s.store.Delete(taskid)
 	if err != nil {
-		http.Error(w, fmt.Sprint("Task by id %s not found"), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Task by id %v not found", taskid), http.StatusNotFound)
 	}
 }
 
 func (s *taskServer) DelTasks(w http.ResponseWriter, req *http.Request) {
 	s.store.DeleteAll()
-}
-
-func main() {
-	log.Printf("Сервер запущен")
-	NewTaskServer()
 }
