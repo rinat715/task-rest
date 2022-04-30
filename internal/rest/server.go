@@ -1,10 +1,9 @@
-package main
+package rest
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"mime"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"github.com/bmizerany/pat"
 
 	"go_rest/internal/models"
+	"go_rest/internal/taskstore/sqlitestore"
 )
 
 // как бы класс только структура которая создает экземпляр сервера
@@ -22,12 +22,16 @@ type taskServer struct {
 }
 
 func NewTaskServer() {
+	ts, err := sqlitestore.New(":memory:")
+	if err != nil {
+		log.Fatal(err)
+	}
 	s := &taskServer{
-		store:  taskstore.New(),
+		store:  ts,
 		router: pat.New(),
 	}
 	s.routers()
-	log.Fatal(http.ListenAndServe("localhost:"+os.Getenv("SERVERPORT"), s.router)) // пробрасываю порт который будет слушаать сервер
+	log.Fatal(http.ListenAndServe("localhost:"+os.Getenv("SERVERPORT"), s.middleware())) // пробрасываю порт который будет слушаать сервер
 }
 
 // utils
@@ -54,21 +58,6 @@ func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, 
 	return nil
 }
 
-func (s *taskServer) validateRequestType(w http.ResponseWriter, req *http.Request, request_type string) error {
-	// Enforce a JSON Content-Type.
-	contentType := req.Header.Get("Content-Type")
-	mediatype, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	if mediatype != request_type {
-		http.Error(w, fmt.Sprint("expect %s Content-Type", request_type), http.StatusUnsupportedMediaType)
-		return err
-	}
-	return nil
-}
-
 func (s *taskServer) getIdfromQuery(req *http.Request) int {
 	param := req.URL.Query().Get(":taskid")
 	taskid, err := strconv.Atoi(param)
@@ -76,6 +65,12 @@ func (s *taskServer) getIdfromQuery(req *http.Request) int {
 		return 0
 	}
 	return taskid
+}
+
+// middleware
+func (s *taskServer) middleware() http.Handler {
+	handler := Logging(s.router)
+	return PanicRecovery(handler)
 }
 
 // routes
@@ -89,7 +84,6 @@ func (s *taskServer) routers() {
 
 // handlers
 func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
-	var tasks models.Tasks
 	tag := req.URL.Query().Get("tag")
 	date := req.URL.Query().Get("date")
 
@@ -99,7 +93,7 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if tag != "" {
-		tasks = s.store.GetByTag(tag)
+		tasks, err := s.store.GetByTag(tag)
 	}
 
 	if date != "" {
@@ -108,9 +102,9 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, fmt.Sprint("Date %s invalid", date), http.StatusBadRequest)
 			return
 		}
-		tasks = s.store.GetByDate(t)
+		tasks, err := s.store.GetByDate(t)
 	}
-	tasks = s.store.GetAll()
+	tasks, err := s.store.GetAll()
 	s.jsonResponse(w, &tasks)
 }
 

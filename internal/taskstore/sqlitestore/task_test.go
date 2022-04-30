@@ -9,6 +9,7 @@ import (
 	"testing"
 )
 
+// TODO надо дописать тесты на DELETE
 func TestDb(t *testing.T) {
 	var err error
 	date1, err := m.JsonDateParse("2009-10-23")
