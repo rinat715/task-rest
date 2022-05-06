@@ -21,7 +21,8 @@ func PanicRecovery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				http.Error(w, "Error, Упал сервер", http.StatusInternalServerError)
+				log.Println(err)
 				log.Println(string(debug.Stack()))
 			}
 		}()
@@ -29,8 +30,7 @@ func PanicRecovery(next http.Handler) http.Handler {
 	})
 }
 
-func ValidateRequestType(w http.ResponseWriter, req *http.Request, request_type string) error {
-	// Enforce a JSON Content-Type.
+func validateRequestType(w http.ResponseWriter, req *http.Request, request_type string) error {
 	contentType := req.Header.Get("Content-Type")
 	mediatype, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
@@ -38,8 +38,18 @@ func ValidateRequestType(w http.ResponseWriter, req *http.Request, request_type 
 		return err
 	}
 	if mediatype != request_type {
-		http.Error(w, fmt.Sprint("expect %s Content-Type", request_type), http.StatusUnsupportedMediaType)
+		http.Error(w, fmt.Sprintf("expect %v Content-Type", request_type), http.StatusUnsupportedMediaType)
 		return err
 	}
 	return nil
+}
+
+func ValidateRequestJsonType(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		err := validateRequestType(w, req, "application/json")
+		if err != nil {
+			return
+		}
+		next.ServeHTTP(w, req)
+	})
 }
