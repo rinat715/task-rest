@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/bmizerany/pat"
 	"github.com/justinas/alice"
 
+	"go_rest/internal/config"
 	"go_rest/internal/models"
 	"go_rest/internal/taskstore/sqlitestore"
 )
@@ -23,6 +23,7 @@ type taskServer struct {
 }
 
 func NewTaskServer() {
+	var err error
 	ts, err := sqlitestore.New(":memory:")
 	if err != nil {
 		log.Fatal(err)
@@ -32,7 +33,11 @@ func NewTaskServer() {
 		router: pat.New(),
 	}
 	s.routers()
-	log.Fatal(http.ListenAndServe("localhost:"+os.Getenv("SERVERPORT"), s.router)) // пробрасываю порт который будет слушаать сервер
+	url := fmt.Sprintf("localhost:%v", config.Config.Port)
+	err = http.ListenAndServe(url, s.router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // utils

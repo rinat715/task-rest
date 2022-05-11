@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"go_rest/internal/config"
 )
 
 var (
@@ -89,5 +91,5 @@ func Critical(v ...interface{}) {
 func init() {
 	lg := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	SetLogger(lg)
-	SetLevel(LevelInfo)
+	SetLevel(config.Config.LogLevel)
 }

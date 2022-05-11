@@ -1,11 +1,11 @@
 package main
 
 import (
+	"go_rest/internal/logger"
 	"go_rest/internal/rest"
-	"log"
 )
 
 func main() {
-	log.Printf("Сервер запущен")
+	logger.Info("Сервер запущен")
 	rest.NewTaskServer()
 }
