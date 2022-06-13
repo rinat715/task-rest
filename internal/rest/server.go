@@ -55,13 +55,13 @@ func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, 
 	return nil
 }
 
-func (s *taskServer) getIdfromQuery(req *http.Request) int {
+func (s *taskServer) getIdfromQuery(req *http.Request) (int, error) {
 	param := req.URL.Query().Get(":taskid")
 	taskid, err := strconv.Atoi(param)
 	if err != nil {
-		return 0
+		return 0, fmt.Errorf("Invalid taskid: %v", param)
 	}
-	return taskid
+	return taskid, nil
 }
 
 // routes
@@ -87,6 +87,7 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	var err error
 
 	if tag != "" && date != "" {
+		logger.Error(fmt.Sprintf("tag: %v, date: %v", tag, date))
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
 		return
 	}
@@ -94,6 +95,7 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	if tag != "" {
 		tasks, err = s.store.GetByTag(tag)
 		if err != nil {
+			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
 			return
 		}
@@ -102,17 +104,20 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	if date != "" {
 		t, err := models.JsonDateParse(date)
 		if err != nil {
+			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Date %v invalid", date), http.StatusBadRequest)
 			return
 		}
 		tasks, err = s.store.GetByDate(t)
 		if err != nil {
+			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
 			return
 		}
 	}
 	tasks, err = s.store.GetAll()
 	if err != nil {
+		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
 		return
 	}
@@ -121,14 +126,18 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 
 func (s *taskServer) GetTaskbyId(w http.ResponseWriter, req *http.Request) {
 	var task models.Task
-	taskid := s.getIdfromQuery(req)
-	if taskid == 0 {
+	var err error
+	taskid, err := s.getIdfromQuery(req)
+	if err != nil {
+		logger.Error(err)
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
 		return
 	}
-	task, err := s.store.Get(taskid)
+	task, err = s.store.Get(taskid)
 	if err != nil {
+		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Task by id %v not found", task.Id), http.StatusNotFound)
+		return
 	}
 	s.jsonResponse(w, &task)
 
@@ -140,6 +149,7 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 
 	err = s.parseJsonRequest(w, req, &task)
 	if err != nil {
+		logger.Error(err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
@@ -155,19 +165,26 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *taskServer) DelTaskbyId(w http.ResponseWriter, req *http.Request) {
-	taskid := s.getIdfromQuery(req)
+	var err error
+	taskid, err := s.getIdfromQuery(req)
 
-	if taskid == 0 {
+	if err != nil {
+		logger.Error(err)
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
 		return
 	}
 
-	err := s.store.Delete(taskid)
+	err = s.store.Delete(taskid)
 	if err != nil {
+		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Task by id %v not found", taskid), http.StatusNotFound)
+		return
 	}
 }
 
 func (s *taskServer) DelTasks(w http.ResponseWriter, req *http.Request) {
-	s.store.DeleteAll()
+	err := s.store.DeleteAll()
+	logger.Error(err)
+	http.Error(w, "Failed delete all tasks", http.StatusBadRequest)
+	return
 }

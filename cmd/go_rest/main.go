@@ -31,7 +31,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ts.Close()
 
 	url := fmt.Sprintf("localhost:%v", config.Config.Port)
 	s := rest.NewTaskServer(ts)
@@ -52,6 +51,7 @@ func main() {
 	})
 	g.Go(func() error {
 		<-gCtx.Done()
+		ts.Close()
 		return httpServer.Shutdown(context.Background())
 	})
 
