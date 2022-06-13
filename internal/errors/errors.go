@@ -21,11 +21,9 @@ func (err ErrorWrapper) Unwrap() error {
 	return err.Err // Returns inner error
 }
 
-// Returns the inner most CustomErrorWrapper
 func (err ErrorWrapper) Dig() ErrorWrapper {
 	var ew ErrorWrapper
 	if errors.As(err.Err, &ew) {
-		// Recursively digs until wrapper error is not in which case it will stop
 		return ew.Dig()
 	}
 	return err

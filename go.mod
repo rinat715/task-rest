@@ -7,4 +7,6 @@ require (
 	github.com/cristalhq/aconfig v0.16.8 // indirect
 	github.com/justinas/alice v1.2.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.12 // indirect
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
+
 )

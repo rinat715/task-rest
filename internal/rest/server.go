@@ -3,41 +3,33 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
+
+	"go_rest/internal/taskstore/sqlstore"
 
 	"github.com/bmizerany/pat"
 	"github.com/justinas/alice"
 
-	"go_rest/internal/config"
+	"go_rest/internal/logger"
 	"go_rest/internal/models"
-	"go_rest/internal/taskstore/sqlitestore"
 )
 
 // как бы класс только структура которая создает экземпляр сервера
 // store это экземпляр хранилища тасков
 type taskServer struct {
 	store  models.Repository
-	router *pat.PatternServeMux
+	Router *pat.PatternServeMux
 }
 
-func NewTaskServer() {
-	var err error
-	ts, err := sqlitestore.New(":memory:")
-	if err != nil {
-		log.Fatal(err)
-	}
+func NewTaskServer(ts *sqlstore.Store) *taskServer {
 	s := &taskServer{
 		store:  ts,
-		router: pat.New(),
+		Router: pat.New(),
 	}
 	s.routers()
-	url := fmt.Sprintf("localhost:%v", config.Config.Port)
-	err = http.ListenAndServe(url, s.router)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return s
+
 }
 
 // utils
@@ -75,12 +67,12 @@ func (s *taskServer) getIdfromQuery(req *http.Request) int {
 // routes
 func (s *taskServer) routers() {
 	commonHandlers := alice.New(PanicRecovery, Logging, ValidateRequestJsonType)
-	s.router.Get("/tasks", commonHandlers.Then(http.HandlerFunc(s.GetTasks)))
-	s.router.Get("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.GetTaskbyId)))
-	s.router.Post("/tasks", commonHandlers.Then(http.HandlerFunc(s.PostTask)))
-	s.router.Del("/tasks", commonHandlers.Then(http.HandlerFunc(s.DelTasks)))
-	s.router.Del("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.DelTaskbyId)))
-	s.router.Get("/test_panic", commonHandlers.Then(http.HandlerFunc(s.TestPanic)))
+	s.Router.Get("/tasks", commonHandlers.Then(http.HandlerFunc(s.GetTasks)))
+	s.Router.Get("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.GetTaskbyId)))
+	s.Router.Post("/tasks", commonHandlers.Then(http.HandlerFunc(s.PostTask)))
+	s.Router.Del("/tasks", commonHandlers.Then(http.HandlerFunc(s.DelTasks)))
+	s.Router.Del("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.DelTaskbyId)))
+	s.Router.Get("/test_panic", commonHandlers.Then(http.HandlerFunc(s.TestPanic)))
 }
 
 // handlers
@@ -148,9 +140,15 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 
 	err = s.parseJsonRequest(w, req, &task)
 	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	s.store.Create(&task)
+	err = s.store.Create(&task)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, "Failed create task", http.StatusBadRequest)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 	s.jsonResponse(w, &task)
 
