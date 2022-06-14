@@ -2,10 +2,7 @@ package sqlstore
 
 import (
 	"database/sql"
-
 	"go_rest/internal/logger"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Store struct {

@@ -3,12 +3,9 @@ package sqlstore
 
 import (
 	"database/sql"
+	"fmt"
 	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
-
-	"fmt"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type TaskNotFound struct {
