@@ -59,5 +59,4 @@ func main() {
 		logger.Info(fmt.Sprintf("Сервер остановлен : %s \n", err))
 
 	}
-
 }
