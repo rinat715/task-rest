@@ -3,8 +3,6 @@ package sqlstore
 import (
 	"database/sql"
 	m "go_rest/internal/models"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func parseTasks(rows *sql.Rows) (m.Tasks, error) {

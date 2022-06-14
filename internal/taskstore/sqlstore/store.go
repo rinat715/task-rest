@@ -2,8 +2,7 @@ package sqlstore
 
 import (
 	"database/sql"
-
-	_ "github.com/mattn/go-sqlite3"
+	"go_rest/internal/logger"
 )
 
 type Store struct {
@@ -22,6 +21,7 @@ func New(db *sql.DB) (*Store, error) {
 }
 
 func (ts *tasks) Close() error {
+	logger.Info("DB close")
 	return ts.db.Close()
 }
 
