@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  backend:
+    build: .
+    environment:
+      - 'LogLevel=10'
+      - 'Port=8082'
+
+    volumes:
+      - sqlite_file:/root/db
+
+volumes:
+  sqlite_file: null

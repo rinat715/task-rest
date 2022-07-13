@@ -3,29 +3,46 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
-
-	"go_rest/internal/taskstore/sqlstore"
+	"time"
 
 	"github.com/bmizerany/pat"
 	"github.com/justinas/alice"
 
+	"go_rest/internal/config"
 	"go_rest/internal/logger"
 	"go_rest/internal/models"
+	taskService "go_rest/internal/services/tasks"
+	userService "go_rest/internal/services/users"
 )
+
+const QueryDateForm = "2006-01-02"
+
+func NewHttpServer(s *taskServer) *http.Server {
+	return &http.Server{
+		Addr:    s.BuildUrl(),
+		Handler: s.Router,
+	}
+}
 
 // как бы класс только структура которая создает экземпляр сервера
 // store это экземпляр хранилища тасков
 type taskServer struct {
-	store  models.Repository
-	Router *pat.PatternServeMux
+	UserService userService.Interface
+	TaskService taskService.Interface
+	Router      *pat.PatternServeMux
+	Logger      *log.Logger
+	Config      *config.Config
 }
 
-func NewTaskServer(ts *sqlstore.Store) *taskServer {
+func NewTaskServer(u userService.Interface, t taskService.Interface, r *pat.PatternServeMux, c *config.Config) *taskServer {
 	s := &taskServer{
-		store:  ts,
-		Router: pat.New(),
+		UserService: u,
+		TaskService: t,
+		Router:      r,
+		Config:      c,
 	}
 	s.routers()
 	return s
@@ -33,9 +50,13 @@ func NewTaskServer(ts *sqlstore.Store) *taskServer {
 }
 
 // utils
+func (s *taskServer) BuildUrl() string {
+	return fmt.Sprintf("%v:%v", s.Config.Host, s.Config.Port)
+}
+
 // рендрер json responce
-func (s *taskServer) jsonResponse(w http.ResponseWriter, v models.Serializer) error {
-	js, err := v.Serialize()
+func (s *taskServer) jsonResponse(w http.ResponseWriter, v json.Marshaler) error {
+	js, err := json.Marshal(v)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return err
@@ -45,7 +66,7 @@ func (s *taskServer) jsonResponse(w http.ResponseWriter, v models.Serializer) er
 	return nil
 }
 
-func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, v interface{}) error {
+func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, v json.Unmarshaler) error {
 	dec := json.NewDecoder(req.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
@@ -59,7 +80,7 @@ func (s *taskServer) getIdfromQuery(req *http.Request) (int, error) {
 	param := req.URL.Query().Get(":taskid")
 	taskid, err := strconv.Atoi(param)
 	if err != nil {
-		return 0, fmt.Errorf("Invalid taskid: %v", param)
+		return 0, fmt.Errorf("invalid taskid: %v", param)
 	}
 	return taskid, nil
 }
@@ -93,7 +114,7 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if tag != "" {
-		tasks, err = s.store.GetByTag(tag)
+		tasks, err = s.TaskService.GetByTag(tag)
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
@@ -102,20 +123,20 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if date != "" {
-		t, err := models.JsonDateParse(date)
+		t, err := time.Parse(QueryDateForm, date)
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Date %v invalid", date), http.StatusBadRequest)
 			return
 		}
-		tasks, err = s.store.GetByDate(t)
+		tasks, err = s.TaskService.GetByDate(t.Format(QueryDateForm))
 		if err != nil {
 			logger.Error(err)
 			http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
 			return
 		}
 	}
-	tasks, err = s.store.GetAll()
+	tasks, err = s.TaskService.GetAll()
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Store error:  %v", err), http.StatusServiceUnavailable)
@@ -133,7 +154,7 @@ func (s *taskServer) GetTaskbyId(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
 		return
 	}
-	task, err = s.store.Get(taskid)
+	task, err = s.TaskService.Get(taskid)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Task by id %v not found", task.Id), http.StatusNotFound)
@@ -153,7 +174,7 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	err = s.store.Create(&task)
+	err = s.TaskService.Create(&task)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, "Failed create task", http.StatusBadRequest)
@@ -174,7 +195,7 @@ func (s *taskServer) DelTaskbyId(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = s.store.Delete(taskid)
+	err = s.TaskService.Delete(taskid)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Task by id %v not found", taskid), http.StatusNotFound)
@@ -183,8 +204,11 @@ func (s *taskServer) DelTaskbyId(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *taskServer) DelTasks(w http.ResponseWriter, req *http.Request) {
-	err := s.store.DeleteAll()
-	logger.Error(err)
-	http.Error(w, "Failed delete all tasks", http.StatusBadRequest)
-	return
+	err := s.TaskService.DeleteAll()
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, "Failed delete all tasks", http.StatusBadRequest)
+		return
+	}
+
 }
