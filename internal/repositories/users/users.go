@@ -6,9 +6,6 @@ import (
 	m "go_rest/internal/models"
 )
 
-var baseQuery string = `SELECT userid, email, pass, is_admin
-						FROM users`
-
 type UserRepositoryInterface interface {
 	Create(user *m.User) error
 	Get(userId int) (m.User, error)
@@ -51,7 +48,9 @@ func (s *UserRepository) Create(user *m.User) error {
 
 func (s *UserRepository) Get(userId int) (m.User, error) {
 	var user m.User
-	query := baseQuery + `\n` + `WHERE userid = ?`
+	query := `SELECT userid, email, pass, is_admin
+			  FROM users
+			  WHERE userid = ?`
 
 	err := s.db.QueryRow(query, userId).Scan(&user.Id, &user.Email, &user.Pass, &user.IsAdmin)
 	switch {
@@ -66,7 +65,9 @@ func (s *UserRepository) Get(userId int) (m.User, error) {
 
 func (s *UserRepository) GetbyEmail(email string) (m.User, error) {
 	var user m.User
-	query := baseQuery + `\n` + `WHERE email = ?`
+	query := `SELECT userid, email, pass, is_admin
+			FROM users
+			WHERE email = ?`
 
 	err := s.db.QueryRow(query, email).Scan(&user.Id, &user.Email, &user.Pass, &user.IsAdmin)
 	switch {

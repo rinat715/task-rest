@@ -27,6 +27,10 @@ type Task struct {
 	Done   bool      `json:"done"`
 }
 
+func (t *Task) IsEmpty() bool {
+	return t.Id == 0
+}
+
 type Tasks []Task
 
 func (v Tasks) MarshalJSON() ([]byte, error) {

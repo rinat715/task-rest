@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"go_rest/internal/config"
+	"go_rest/internal/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -17,6 +18,7 @@ func NewConnDB(ctx context.Context, c *config.Config) (*sql.DB, error) {
 	go func() {
 		<-ctx.Done()
 		err := db.Close()
+		logger.Info("Db closed")
 		if err != nil {
 			panic(err)
 		}

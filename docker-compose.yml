@@ -4,8 +4,11 @@ services:
   backend:
     build: .
     environment:
-      - 'LogLevel=10'
+      - 'Host=localhost'
       - 'Port=8082'
+      - 'LogLevel=10'
+      - 'PathDB=/root/db'
+      - 'Salt=non_secure'
 
     volumes:
       - sqlite_file:/root/db

@@ -2,13 +2,12 @@ package tasks
 
 import (
 	"database/sql"
-	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
 )
 
-var baseQuery string = `SELECT taskid, userid, text, date, done, tag.tagid, tag.value
+var baseQuery string = `SELECT taskid, userid, text, date, done, tags.tagid, tags.value
 						FROM tasks
-						JOIN tags USING(taskid)`
+						LEFT JOIN tags USING(taskid)`
 
 type TaskRepositoryInterface interface {
 	Create(task *m.Task, userId int) error
@@ -28,10 +27,6 @@ type TaskRepository struct {
 
 func NewTaskRepository(db *sql.DB) *TaskRepository {
 	return &TaskRepository{db}
-}
-
-func (ts *TaskRepository) Close() error {
-	return ts.db.Close()
 }
 
 func (ts *TaskRepository) parseTask(rows *sql.Rows) (m.Task, error) {
@@ -62,19 +57,30 @@ func (ts *TaskRepository) parseTasks(rows *sql.Rows) (m.Tasks, error) {
 	var tasksMap = make(map[int]m.Task)
 
 	for rows.Next() {
-		var tag m.Tag
 		var task m.Task
-		err = rows.Scan(&task.Id, &task.UserId, &task.Text, &task.Date, &task.Done, &tag.Id, &tag.Text)
-		switch {
-		case err == sql.ErrNoRows:
-			return tasks, &e.EmptyTasks{}
-		case err != nil:
+		var tagId sql.NullInt32
+		var tagText sql.NullString
+
+		err = rows.Scan(&task.Id, &task.UserId, &task.Text, &task.Date, &task.Done, &tagId, &tagText)
+		if err != nil {
 			return tasks, err
 		}
-		if item, ok := tasksMap[task.Id]; ok {
-			item.Tags = append(item.Tags, tag)
+		item, ok := tasksMap[task.Id]
+		if ok {
+			if tagId.Valid {
+				item.Tags = append(item.Tags, m.Tag{
+					Id:   int(tagId.Int32),
+					Text: tagText.String,
+				})
+			}
 		} else {
 			tasksMap[task.Id] = task
+			if tagId.Valid {
+				item.Tags = append(item.Tags, m.Tag{
+					Id:   int(tagId.Int32),
+					Text: tagText.String,
+				})
+			}
 		}
 	}
 	err = rows.Err()
@@ -102,15 +108,10 @@ func (ts *TaskRepository) getTasks(query string, req string) (m.Tasks, error) {
 		return tasks, err
 	}
 	tasks, err = ts.parseTasks(rows)
-
-	switch {
-	default:
-		return tasks, nil
-	case err == sql.ErrNoRows:
-		return tasks, &e.EmptyTasks{}
-	case err != nil:
+	if err != nil {
 		return tasks, err
 	}
+	return tasks, nil
 }
 
 func (ts *TaskRepository) GetAll() (m.Tasks, error) {
@@ -124,12 +125,12 @@ func (ts *TaskRepository) GetAll() (m.Tasks, error) {
 }
 
 func (ts *TaskRepository) GetByTag(tag string) (m.Tasks, error) {
-	query := baseQuery + `\n` + `WHERE tag.value = ?`
+	query := baseQuery + `WHERE tags.value = ?`
 	return ts.getTasks(query, tag)
 }
 
 func (ts *TaskRepository) GetByDate(date string) (m.Tasks, error) {
-	query := baseQuery + `\n` + `WHERE date = ?`
+	query := baseQuery + `WHERE tasks.date = ?`
 	return ts.getTasks(query, date)
 }
 
@@ -138,7 +139,7 @@ type transaction struct {
 }
 
 func (t *transaction) exec(query string, args ...any) (int, error) {
-	res, err := t.tx.Exec(query, args)
+	res, err := t.tx.Exec(query, args...)
 	if err != nil {
 		t.tx.Rollback()
 		return 0, err
@@ -165,40 +166,35 @@ func newTransaction(db *sql.DB) (*transaction, error) {
 
 func (ts *TaskRepository) Get(taskid int) (m.Task, error) {
 	var task m.Task
-	query := baseQuery + `\n` + `WHERE taskid = ?`
+	query := baseQuery + `WHERE taskid = ?`
 
 	rows, err := ts.db.Query(query, taskid)
 	if err != nil {
 		return task, err
 	}
-
 	task, err = ts.parseTask(rows)
-	switch {
-	default:
-		return task, nil
-	case err == sql.ErrNoRows:
-		return task, &e.TaskNotFound{TaskId: taskid}
-	case err != nil:
+	if err != nil {
 		return task, err
 	}
+	return task, nil
 }
 
 func (ts *TaskRepository) Delete(id int) error {
 	var err error
-	taskQuery := "DELETE FROM task WHERE taskid = ?"
-	tagQuery := "DELETE FROM tag WHERE taskid = ?"
+	taskQuery := "DELETE FROM tasks WHERE taskid = ?"
+	tagQuery := "DELETE FROM tags WHERE taskid = ?"
 
 	tx, err := newTransaction(ts.db)
 	if err != nil {
 		return err
 	}
 
-	taskId, err := tx.exec(taskQuery)
+	_, err = tx.exec(taskQuery, id)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.exec(tagQuery, taskId)
+	_, err = tx.exec(tagQuery, id)
 	if err != nil {
 		return err
 	}

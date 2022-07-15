@@ -86,17 +86,6 @@ func (e *TaskNotFound) Is(target error) bool {
 	return e.TaskId == t.TaskId
 }
 
-type EmptyTasks struct{}
-
-func (e *EmptyTasks) Error() string {
-	return "Empty Tasks"
-}
-
-func (e *EmptyTasks) Is(target error) bool {
-	_, ok := target.(*EmptyTasks)
-	return ok
-}
-
 type UserNotFound struct {
 	UserId int
 	Email  string
