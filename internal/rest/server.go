@@ -3,7 +3,6 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,8 +32,7 @@ type taskServer struct {
 	UserService userService.Interface
 	TaskService taskService.Interface
 	Router      *pat.PatternServeMux
-	Logger      *log.Logger
-	Config      *config.Config
+	*config.Config
 }
 
 func NewTaskServer(u userService.Interface, t taskService.Interface, r *pat.PatternServeMux, c *config.Config) *taskServer {
@@ -51,7 +49,7 @@ func NewTaskServer(u userService.Interface, t taskService.Interface, r *pat.Patt
 
 // utils
 func (s *taskServer) BuildUrl() string {
-	return fmt.Sprintf("%v:%v", s.Config.Host, s.Config.Port)
+	return fmt.Sprintf("%v:%v", s.Host, s.Port)
 }
 
 // рендрер json responce

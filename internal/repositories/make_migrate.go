@@ -12,14 +12,14 @@ import (
 
 const migrationPath string = "file://./../migration"
 
-func makeMigrate(db *sql.DB) error {
+func MakeMigrate(db *sql.DB, path string) error {
 	instance, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
 		return err
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		migrationPath,
+		path,
 		"sqlite",
 		instance)
 	if err != nil {
@@ -33,7 +33,7 @@ func SetupTestdb() (*sql.DB, error) {
 	if err != nil {
 		return &sql.DB{}, err
 	}
-	err = makeMigrate(db)
+	err = MakeMigrate(db, migrationPath)
 	if err != nil {
 		return &sql.DB{}, err
 	}
