@@ -1,9 +1,10 @@
-init:
+build:
 	docker-compose build
-	# create db
-	docker-compose exec backend sqlite3 /root/sqlite3.db
+
+init:
+	docker-compose up -d
 	# migrate
-	docker-compose exec migrate -path db/migration -database "sqlite3://root/sqlite3.db" -verbose up
+	docker-compose exec backend /root/go_rest --migratePath "file://./migration" 
 
 start:
 	docker-compose up

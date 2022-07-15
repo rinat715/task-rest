@@ -21,12 +21,12 @@ FROM alpine:latest
 WORKDIR /root/
 
 # install depends
-COPY ./scripts/migrate ./
+COPY ./internal/repositories/migration/ /root/migration/
 RUN apk add --update sqlite
 
 # Copy the source code. Note the slash at the end, as explained in
 # https://docs.docker.com/engine/reference/builder/#copy
-COPY --from=0 /app ./
+COPY --from=0 /app/go_rest ./
 
 # Run
 CMD [ "./go_rest" ]

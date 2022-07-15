@@ -34,7 +34,8 @@ func (t *Task) IsEmpty() bool {
 type Tasks []Task
 
 func (v Tasks) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v)
+	type localTasks []Task
+	return json.Marshal(localTasks(v))
 }
 
 type Tag struct {
@@ -45,5 +46,6 @@ type Tag struct {
 type Tags []Tag
 
 func (v Tags) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v)
+	type localTags []Tag
+	return json.Marshal(localTags(v))
 }

@@ -38,8 +38,10 @@ func easyjsonD2b7633eDecodeGoRestInternalModels(in *jlexer.Lexer, out *User) {
 		switch key {
 		case "id":
 			out.Id = int(in.Int())
-		case "text":
+		case "email":
 			out.Email = string(in.String())
+		case "is_admin":
+			out.IsAdmin = bool(in.Bool())
 		default:
 			in.SkipRecursive()
 		}
@@ -60,9 +62,14 @@ func easyjsonD2b7633eEncodeGoRestInternalModels(out *jwriter.Writer, in User) {
 		out.Int(int(in.Id))
 	}
 	{
-		const prefix string = ",\"text\":"
+		const prefix string = ",\"email\":"
 		out.RawString(prefix)
 		out.String(string(in.Email))
+	}
+	{
+		const prefix string = ",\"is_admin\":"
+		out.RawString(prefix)
+		out.Bool(bool(in.IsAdmin))
 	}
 	out.RawByte('}')
 }

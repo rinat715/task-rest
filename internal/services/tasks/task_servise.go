@@ -1,8 +1,6 @@
 package tasks
 
 import (
-	"fmt"
-	e "go_rest/internal/errors"
 	m "go_rest/internal/models"
 	"go_rest/internal/repositories/tasks"
 
@@ -10,7 +8,7 @@ import (
 )
 
 type Interface interface {
-	Create(*m.Task) error
+	Create(task *m.Task, userId int) error
 	Get(id int) (m.Task, error)
 	Delete(id int) error
 	DeleteAll() error
@@ -20,7 +18,7 @@ type Interface interface {
 }
 
 type TaskService struct {
-	user       *m.User
+	user       *m.User // TODO переделать
 	repository tasks.TaskRepositoryInterface
 }
 
@@ -28,57 +26,32 @@ func (t *TaskService) SetUser(user *m.User) {
 	t.user = user
 }
 
-func (t *TaskService) Create(task *m.Task) error {
-	return t.repository.Create(task, t.user.Id)
+func (t *TaskService) Create(task *m.Task, userId int) error {
+	return t.repository.Create(task, userId)
 }
 
 func (t *TaskService) Get(id int) (m.Task, error) {
-	if t.user.IsAdmin {
-		return t.repository.Get(id)
-	} else {
-		return m.Task{}, fmt.Errorf("not implement err")
-	}
+	return t.repository.Get(id)
 }
 
 func (t *TaskService) Delete(id int) error {
-	if t.user.IsAdmin {
-		return t.repository.Delete(id)
-	} else {
-		return fmt.Errorf("not implement err")
-	}
+	return t.repository.Delete(id)
 }
 
 func (t *TaskService) DeleteAll() error {
-	if t.user.IsAdmin {
-		return t.repository.DeleteAll()
-	} else {
-		return &e.UserNotAdminErr{UserId: t.user.Id}
-	}
-
+	return t.repository.DeleteAll()
 }
 
 func (t *TaskService) GetByTag(tag string) (m.Tasks, error) {
-	if t.user.IsAdmin {
-		return t.repository.GetByTag(tag)
-	} else {
-		return m.Tasks{}, fmt.Errorf("not implement err")
-	}
+	return t.repository.GetByTag(tag)
 }
 
 func (t *TaskService) GetByDate(date string) (m.Tasks, error) {
-	if t.user.IsAdmin {
-		return t.repository.GetByDate(date)
-	} else {
-		return m.Tasks{}, fmt.Errorf("not implement err")
-	}
+	return t.repository.GetByDate(date)
 }
 
 func (t *TaskService) GetAll() (m.Tasks, error) {
-	if t.user.IsAdmin {
-		return t.repository.GetAll()
-	} else {
-		return m.Tasks{}, fmt.Errorf("not implement err")
-	}
+	return t.repository.GetAll()
 }
 
 func NewTaskService(r tasks.TaskRepositoryInterface) *TaskService {

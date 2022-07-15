@@ -18,25 +18,6 @@ func init() {
 	migratePath = flag.String("migratePath", "", "Путь к каталогу с миграциями")
 }
 
-func runServer(ctx context.Context) {
-	s, err := initializeServer(ctx)
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		logger.Info("Сервер запущен")
-		err := s.ListenAndServe()
-		if err != nil {
-			panic(err)
-		}
-	}()
-	go func() {
-		<-ctx.Done()
-		err := s.Shutdown(context.Background())
-		logger.Info(fmt.Sprintf("Сервер остановлен : %s \n", err))
-	}()
-}
-
 func main() {
 	flag.Parse()
 
@@ -50,13 +31,33 @@ func main() {
 	}()
 
 	if *migratePath != "" {
+		logger.Info("миграции")
 		m, err := initializeMigrationService(ctx)
 		if err != nil {
 			panic(err)
 		}
-		m.Make(*migratePath)
+		err = m.Make(*migratePath)
+		if err != nil {
+			panic(err)
+		}
 	} else {
-		runServer(ctx)
+		logger.Info("старт сервера")
+		s, err := initializeServer(ctx)
+		if err != nil {
+			panic(err)
+		}
+		logger.Info("Сервер запущен")
+		go func() {
+			<-ctx.Done()
+			err := s.Shutdown(context.Background())
+			logger.Info(fmt.Sprintf("Сервер остановлен : %s", err))
+		}()
+
+		err = s.ListenAndServe()
+		if err != nil {
+			logger.Info(fmt.Sprintf("Сервер не запущен : %s", err))
+		}
+
 	}
 
 }

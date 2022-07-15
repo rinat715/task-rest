@@ -172,7 +172,7 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	err = s.TaskService.Create(&task)
+	err = s.TaskService.Create(&task, 1) // TODO добавить юзера
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, "Failed create task", http.StatusBadRequest)
