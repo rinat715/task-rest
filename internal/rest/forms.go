@@ -11,7 +11,7 @@ type TaskForm struct {
 	Text string     `json:"text" validate:"required"`
 	Date string     `json:"date" validate:"required"`
 	Tags []*TagForm `json:"tags"`
-	Done bool       `json:"done"`
+	Done bool       `json:"done" validate:"required"`
 }
 
 type TagForm struct {

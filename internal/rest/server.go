@@ -21,8 +21,6 @@ import (
 
 const QueryDateForm = "2006-01-02"
 
-var validate *validator.Validate
-
 func NewHttpServer(s *taskServer) *http.Server {
 	return &http.Server{
 		Addr:    s.BuildUrl(),
@@ -35,12 +33,14 @@ func NewHttpServer(s *taskServer) *http.Server {
 type taskServer struct {
 	UserService userService.Interface
 	TaskService taskService.Interface
+	Validator   *validator.Validate
 	Router      *pat.PatternServeMux
 	*config.Config
 }
 
-func NewTaskServer(u userService.Interface, t taskService.Interface, r *pat.PatternServeMux, c *config.Config) *taskServer {
+func NewTaskServer(v *validator.Validate, u userService.Interface, t taskService.Interface, r *pat.PatternServeMux, c *config.Config) *taskServer {
 	s := &taskServer{
+		Validator:   v,
 		UserService: u,
 		TaskService: t,
 		Router:      r,
@@ -75,7 +75,6 @@ func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, 
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return err
 	}
-	logger.Debug(v)
 	return nil
 }
 
@@ -128,8 +127,11 @@ func (s *taskServer) PostUser(w http.ResponseWriter, req *http.Request) {
 	var userForm UserForm
 
 	err := s.parseJsonRequest(w, req, &userForm)
-	validate = validator.New()
-	validate.Struct(userForm)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+	}
+	err = s.Validator.Struct(&userForm)
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			logger.Error(err)
@@ -240,8 +242,7 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	validate = validator.New()
-	validate.Struct(&taskForm)
+	err = s.Validator.Struct(&taskForm)
 
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
@@ -266,8 +267,6 @@ func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	logger.Debug(taskForm)
-	logger.Debug(taskForm.Tags)
 	task.Text = taskForm.Text
 	date, _ := time.Parse(QueryDateForm, taskForm.Date)
 	task.Date = date
