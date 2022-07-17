@@ -88,8 +88,8 @@ func Critical(v ...interface{}) {
 	logPrint(LevelCritical, "%v", v)
 }
 
-func init() {
+func NewLogger(c *config.Config) {
 	lg := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	SetLogger(lg)
-	SetLevel(config.Config.LogLevel)
+	SetLevel(c.LogLevel)
 }

@@ -2,23 +2,26 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	"go_rest/internal/config"
 	"go_rest/internal/logger"
-	"go_rest/internal/rest"
-	"go_rest/internal/taskstore/sqlitestore"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"golang.org/x/sync/errgroup"
 )
 
-func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+var (
+	migratePath *string
+)
 
+func init() {
+	migratePath = flag.String("migratePath", "", "Путь к каталогу с миграциями")
+}
+
+func main() {
+	flag.Parse()
+
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -27,36 +30,34 @@ func main() {
 		cancel()
 	}()
 
-	ts, err := sqlitestore.New("test.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	url := fmt.Sprintf("localhost:%v", config.Config.Port)
-	s := rest.NewTaskServer(ts)
-
-	httpServer := &http.Server{
-		Addr:    url,
-		Handler: s.Router,
-	}
-
-	g, gCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		logger.Info("Сервер запущен")
-		err = httpServer.ListenAndServe()
+	if *migratePath != "" {
+		logger.Info("миграции")
+		m, err := initializeMigrationService(ctx)
 		if err != nil {
-			return err
+			panic(err)
 		}
-		return nil
-	})
-	g.Go(func() error {
-		<-gCtx.Done()
-		ts.Close()
-		return httpServer.Shutdown(context.Background())
-	})
+		err = m.Make(*migratePath)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		logger.Info("старт сервера")
+		s, err := initializeServer(ctx)
+		if err != nil {
+			panic(err)
+		}
+		logger.Info("Сервер запущен")
+		go func() {
+			<-ctx.Done()
+			err := s.Shutdown(context.Background())
+			logger.Info(fmt.Sprintf("Сервер остановлен : %s", err))
+		}()
 
-	if err := g.Wait(); err != nil {
-		logger.Info(fmt.Sprintf("Сервер остановлен : %s \n", err))
+		err = s.ListenAndServe()
+		if err != nil {
+			logger.Info(fmt.Sprintf("Сервер не запущен : %s", err))
+		}
 
 	}
+
 }

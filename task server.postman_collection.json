@@ -1,0 +1,628 @@
+{
+	"info": {
+		"_postman_id": "dfca2540-7c33-409a-ae62-75e1447dcd51",
+		"name": "task server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "14486932"
+	},
+	"item": [
+		{
+			"name": "tasks",
+			"item": [
+				{
+					"name": "{taskid}",
+					"item": [
+						{
+							"name": "Get task by id",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/tasks/:taskid",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks",
+										":taskid"
+									],
+									"variable": [
+										{
+											"key": "taskid",
+											"value": "1",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Task",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/tasks/:taskid",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"tasks",
+												":taskid"
+											],
+											"variable": [
+												{
+													"key": "taskid",
+													"value": "non nulla exercitation",
+													"description": "(Required) "
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}"
+								}
+							]
+						},
+						{
+							"name": "Delete task by id",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks/:taskid",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks",
+										":taskid"
+									],
+									"variable": [
+										{
+											"key": "taskid",
+											"value": "non nulla exercitation",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Delete task",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/tasks/:taskid",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"tasks",
+												":taskid"
+											],
+											"variable": [
+												{
+													"key": "taskid",
+													"value": "non nulla exercitation",
+													"description": "(Required) "
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Delete task or tasks",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Delete all task",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Create task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Lorem dolore pariatur esse\",\n    \"tags\": [\n        {\n            \"text\": \"вавав\"\n        },\n        {\n            \"text\": \"fdfdfdf\"\n        }\n    ],\n    \"date\": \"1960-04-20\",\n    \"done\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Created Task",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/tasks",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}"
+						}
+					]
+				},
+				{
+					"name": "List of tasks",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"tasks"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "List of tasks",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks?tag=non nulla exercitation&date=2014-05-26",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									],
+									"query": [
+										{
+											"key": "tag",
+											"value": "non nulla exercitation"
+										},
+										{
+											"key": "date",
+											"value": "2014-05-26"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "[\n  {\n    \"id\": -49584539,\n    \"text\": \"Excepteur nisi sed\",\n    \"tags\": [\n      \"voluptate nulla enim\",\n      \"irure cillum in veniam in\"\n    ],\n    \"date\": \"1951-02-01\",\n    \"done\": \"irure m\"\n  },\n  {\n    \"id\": -40465991,\n    \"text\": \"ut consectetur velit fugiat tempor\",\n    \"tags\": [\n      \"fugiat pariatur Excepteur Lorem\",\n      \"incididunt\"\n    ],\n    \"date\": \"2011-07-25\",\n    \"done\": true\n  }\n]"
+						},
+						{
+							"name": "Unexpected error",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks?tag=non nulla exercitation&date=2014-05-26",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									],
+									"query": [
+										{
+											"key": "tag",
+											"value": "non nulla exercitation"
+										},
+										{
+											"key": "date",
+											"value": "2014-05-26"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"value\": \"reference #/components/schemas/Error not found in the OpenAPI spec\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "users",
+			"item": [
+				{
+					"name": "Create user",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@email.com\",\n    \"pass\": \"123\",\n    \"repeat_pass\": \"123\",\n    \"is_admin\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Created Task",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/tasks",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}"
+						}
+					]
+				},
+				{
+					"name": "list users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "List of tasks",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks?tag=non nulla exercitation&date=2014-05-26",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									],
+									"query": [
+										{
+											"key": "tag",
+											"value": "non nulla exercitation"
+										},
+										{
+											"key": "date",
+											"value": "2014-05-26"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "[\n  {\n    \"id\": -49584539,\n    \"text\": \"Excepteur nisi sed\",\n    \"tags\": [\n      \"voluptate nulla enim\",\n      \"irure cillum in veniam in\"\n    ],\n    \"date\": \"1951-02-01\",\n    \"done\": \"irure m\"\n  },\n  {\n    \"id\": -40465991,\n    \"text\": \"ut consectetur velit fugiat tempor\",\n    \"tags\": [\n      \"fugiat pariatur Excepteur Lorem\",\n      \"incididunt\"\n    ],\n    \"date\": \"2011-07-25\",\n    \"done\": true\n  }\n]"
+						},
+						{
+							"name": "Unexpected error",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks?tag=non nulla exercitation&date=2014-05-26",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks"
+									],
+									"query": [
+										{
+											"key": "tag",
+											"value": "non nulla exercitation"
+										},
+										{
+											"key": "date",
+											"value": "2014-05-26"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"value\": \"reference #/components/schemas/Error not found in the OpenAPI spec\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get user by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/:userid",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								":userid"
+							],
+							"variable": [
+								{
+									"key": "userid",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Task",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/tasks/:taskid",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"tasks",
+										":taskid"
+									],
+									"variable": [
+										{
+											"key": "taskid",
+											"value": "non nulla exercitation",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"id\": -58999723,\n  \"text\": \"amet dolor\",\n  \"tags\": [\n    \"in nostrud eiusmod ut voluptate\",\n    \"in\"\n  ],\n  \"date\": \"1973-12-29\",\n  \"done\": -29293457.090598673\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "localhost:8002",
+			"type": "string"
+		}
+	]
+}

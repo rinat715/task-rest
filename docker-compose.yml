@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  backend:
+    build: .
+    environment:
+      - 'Host=0.0.0.0'
+      - 'Port=8000'
+      - 'LogLevel=10'
+      - 'PathDB=/root/db/sqlite.db'
+      - 'Salt=non_secure'
+    ports:
+      - 8000:8000
+
+    volumes:
+      - sqlite_file:/root/db
+
+volumes:
+  sqlite_file: null

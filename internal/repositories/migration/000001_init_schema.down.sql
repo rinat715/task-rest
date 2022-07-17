@@ -1,0 +1,7 @@
+PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS users;
+
+DROP TABLE IF EXISTS tasks;
+
+DROP TABLE IF EXISTS tags;
