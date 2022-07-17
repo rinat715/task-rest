@@ -97,7 +97,7 @@ func (s *taskServer) routers() {
 	s.Router.Del("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.DelTaskbyId)))
 	s.Router.Get("/test_panic", commonHandlers.Then(http.HandlerFunc(s.TestPanic)))
 
-	s.Router.Get("/users/:userid", commonHandlers.Then(http.HandlerFunc(s.GetTaskbyId)))
+	s.Router.Get("/users/:userid", commonHandlers.Then(http.HandlerFunc(s.GetUserbyId)))
 	s.Router.Post("/users", commonHandlers.Then(http.HandlerFunc(s.PostUser)))
 
 }
