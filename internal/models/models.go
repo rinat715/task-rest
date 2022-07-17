@@ -24,7 +24,7 @@ type Task struct {
 	Text   string    `json:"text"`
 	Tags   Tags      `json:"tags"`
 	Date   time.Time `json:"date"`
-	Done   bool      `json:"done"`
+	Done   bool      `json:"done" default:"false"`
 }
 
 func (t *Task) IsEmpty() bool {

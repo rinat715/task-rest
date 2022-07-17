@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+
 	"github.com/bmizerany/pat"
 	"github.com/justinas/alice"
 
@@ -18,6 +20,8 @@ import (
 )
 
 const QueryDateForm = "2006-01-02"
+
+var validate *validator.Validate
 
 func NewHttpServer(s *taskServer) *http.Server {
 	return &http.Server{
@@ -71,6 +75,7 @@ func (s *taskServer) parseJsonRequest(w http.ResponseWriter, req *http.Request, 
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return err
 	}
+	logger.Debug(v)
 	return nil
 }
 
@@ -92,11 +97,74 @@ func (s *taskServer) routers() {
 	s.Router.Del("/tasks", commonHandlers.Then(http.HandlerFunc(s.DelTasks)))
 	s.Router.Del("/tasks/:taskid", commonHandlers.Then(http.HandlerFunc(s.DelTaskbyId)))
 	s.Router.Get("/test_panic", commonHandlers.Then(http.HandlerFunc(s.TestPanic)))
+
+	s.Router.Get("/users/:userid", commonHandlers.Then(http.HandlerFunc(s.GetTaskbyId)))
+	s.Router.Post("/users", commonHandlers.Then(http.HandlerFunc(s.PostUser)))
+
 }
 
 // handlers
 func (s *taskServer) TestPanic(w http.ResponseWriter, req *http.Request) {
 	panic("Error: Тестовый роут для проверки паники")
+}
+
+func (s *taskServer) GetUserbyId(w http.ResponseWriter, req *http.Request) {
+	param := req.URL.Query().Get(":userid")
+	userid, err := strconv.Atoi(param)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid userid:  %v", param), http.StatusBadRequest)
+	}
+	user, err := s.UserService.Get(userid) // TODO добавить обратотку UserNotFound
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, fmt.Sprintf("User by id %v not found", userid), http.StatusBadRequest)
+		return
+	}
+	s.jsonResponse(w, &user)
+}
+
+func (s *taskServer) PostUser(w http.ResponseWriter, req *http.Request) {
+	var user models.User
+	var userForm UserForm
+
+	err := s.parseJsonRequest(w, req, &userForm)
+	validate = validator.New()
+	validate.Struct(userForm)
+	if err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			logger.Error(err)
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+		for _, err := range err.(validator.ValidationErrors) {
+
+			fmt.Println(err.Namespace())
+			fmt.Println(err.Field())
+			fmt.Println(err.StructNamespace())
+			fmt.Println(err.StructField())
+			fmt.Println(err.Tag())
+			fmt.Println(err.ActualTag())
+			fmt.Println(err.Kind())
+			fmt.Println(err.Type())
+			fmt.Println(err.Value())
+			fmt.Println(err.Param())
+			fmt.Println()
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+	}
+	user.Email = userForm.Email
+	user.Pass = userForm.Pass
+	user.IsAdmin = userForm.IsAdmin
+
+	err = s.UserService.Create(&user)
+	if err != nil {
+		logger.Error(err)
+		http.Error(w, "Failed create user", http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+	s.jsonResponse(w, &user)
 }
 
 func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
@@ -144,15 +212,13 @@ func (s *taskServer) GetTasks(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *taskServer) GetTaskbyId(w http.ResponseWriter, req *http.Request) {
-	var task models.Task
-	var err error
 	taskid, err := s.getIdfromQuery(req)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, "Query params invalid", http.StatusBadRequest)
 		return
 	}
-	task, err = s.TaskService.Get(taskid)
+	task, err := s.TaskService.Get(taskid)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, fmt.Sprintf("Task by id %v not found", task.Id), http.StatusNotFound)
@@ -165,13 +231,55 @@ func (s *taskServer) GetTaskbyId(w http.ResponseWriter, req *http.Request) {
 func (s *taskServer) PostTask(w http.ResponseWriter, req *http.Request) {
 	var err error
 	var task models.Task
+	var taskForm TaskForm
 
-	err = s.parseJsonRequest(w, req, &task)
+	err = s.parseJsonRequest(w, req, &taskForm)
 	if err != nil {
 		logger.Error(err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+
+	validate = validator.New()
+	validate.Struct(&taskForm)
+
+	if err != nil {
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			logger.Error(err)
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+		for _, err := range err.(validator.ValidationErrors) {
+
+			fmt.Println(err.Namespace())
+			fmt.Println(err.Field())
+			fmt.Println(err.StructNamespace())
+			fmt.Println(err.StructField())
+			fmt.Println(err.Tag())
+			fmt.Println(err.ActualTag())
+			fmt.Println(err.Kind())
+			fmt.Println(err.Type())
+			fmt.Println(err.Value())
+			fmt.Println(err.Param())
+			fmt.Println()
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+	}
+	logger.Debug(taskForm)
+	logger.Debug(taskForm.Tags)
+	task.Text = taskForm.Text
+	date, _ := time.Parse(QueryDateForm, taskForm.Date)
+	task.Date = date
+	task.Done = taskForm.Done
+	task.Tags = make(models.Tags, len(taskForm.Tags))
+	for idx := range taskForm.Tags {
+		task.Tags[idx] = models.Tag{
+			Text: taskForm.Tags[idx].Text,
+		}
+
+	}
+
 	err = s.TaskService.Create(&task, 1) // TODO добавить юзера
 	if err != nil {
 		logger.Error(err)
