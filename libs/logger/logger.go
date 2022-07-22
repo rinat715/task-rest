@@ -17,8 +17,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"go_rest/internal/config"
 )
 
 var (
@@ -88,8 +86,8 @@ func Critical(v ...interface{}) {
 	logPrint(LevelCritical, "%v", v)
 }
 
-func NewLogger(c *config.Config) {
+func NewLogger(LogLevel int) {
 	lg := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	SetLogger(lg)
-	SetLevel(c.LogLevel)
+	SetLevel(LogLevel)
 }
