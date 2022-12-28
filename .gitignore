@@ -22,4 +22,3 @@ go.work
 
 .vscode
 *.db
-go_rest
